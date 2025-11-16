@@ -1,0 +1,49 @@
+version: '3.8'
+
+services:
+  chroma:
+    image: chromadb/chroma:latest
+    container_name: slack-agent-chroma
+    ports:
+      - "8000:8000"
+    volumes:
+      - chroma-data:/chroma/chroma
+    environment:
+      - IS_PERSISTENT=TRUE
+      - ANONYMIZED_TELEMETRY=FALSE
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/heartbeat"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - slack-agent-network
+
+  bot:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: slack-agent-bot
+    depends_on:
+      chroma:
+        condition: service_healthy
+    ports:
+      - "8080:8080"
+    environment:
+      - CHROMA_URL=http://chroma:8000
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY}
+      - SLACK_BOT_TOKEN=${SLACK_BOT_TOKEN}
+      - SLACK_SIGNING_SECRET=${SLACK_SIGNING_SECRET}
+      - SLACK_APP_TOKEN=${SLACK_APP_TOKEN}
+    volumes:
+      - ./docs:/app/docs:ro
+    networks:
+      - slack-agent-network
+    restart: unless-stopped
+
+volumes:
+  chroma-data:
+
+networks:
+  slack-agent-network:
+    driver: bridge

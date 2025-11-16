@@ -1,0 +1,4 @@
+name: "Bot Assistant"
+description: "Expert on how to use this Slack bot, available commands, features, and troubleshooting"
+aliases: ["help", "bot-help", "usage"]
+priority: high

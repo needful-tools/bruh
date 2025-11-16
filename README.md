@@ -2,6 +2,103 @@
 
 An extensible Slack bot powered by Spring AI and Google Gemini with a convention-based expert system and pluggable skills.
 
+## Adding Your Experts
+
+The easiest way to customize this bot is by adding your own domain experts. **Simply drop documentation files into folders** - the bot will automatically discover and vectorize them.
+
+### Step-by-Step: Add an Expert Using Docker
+
+1. **Create an expert folder** in the `docs/experts/` directory:
+   ```bash
+   mkdir -p docs/experts/my-product
+   ```
+
+2. **Add your documentation files** (Markdown or text):
+   ```bash
+   # docs/experts/my-product/getting-started.md
+   # Getting Started with My Product
+
+   This guide covers installation, configuration, and first steps...
+
+   ## Installation
+   Download the latest release from...
+
+   ## Configuration
+   Edit the config.yml file...
+   ```
+
+   ```bash
+   # docs/experts/my-product/api-reference.md
+   # API Reference
+
+   ## Authentication
+   All API requests require a Bearer token...
+
+   ## Endpoints
+
+   ### GET /api/users
+   Returns a list of users...
+   ```
+
+3. **Restart the bot** to vectorize your new documentation:
+   ```bash
+   docker-compose restart bot
+   ```
+
+4. **Test it in Slack**:
+   ```
+   @bot how do I configure My Product?
+   @bot what are the API endpoints for My Product?
+   ```
+
+   The bot will:
+   - Search the vector store for relevant content from your docs
+   - Use the LLM to synthesize an answer with source citations
+   - Attribute information to specific documentation files
+
+### That's It!
+
+The bot uses a **convention-based discovery system**:
+- Any folder under `docs/experts/` becomes an expert domain
+- All `.md` and `.txt` files are automatically loaded and vectorized
+- The bot uses semantic search to find relevant content when users ask questions
+- No code changes required - just drop in your docs and restart
+
+### Volume Mounting (How It Works)
+
+The Docker setup mounts your local `docs/` folder into the container:
+
+```yaml
+volumes:
+  - ./docs:/app/docs:ro  # Read-only mount
+```
+
+This means:
+- ✅ Add/edit docs on your host machine
+- ✅ Changes are immediately visible to the container
+- ✅ Restart the bot to re-vectorize
+- ✅ No need to rebuild the Docker image
+
+### Tips for Organizing Experts
+
+```
+docs/experts/
+├── product-alpha/           # Expert for Product Alpha
+│   ├── overview.md
+│   ├── installation.md
+│   └── troubleshooting.md
+├── internal-apis/           # Expert for Internal APIs
+│   ├── authentication.md
+│   ├── endpoints.md
+│   └── rate-limits.md
+└── onboarding/              # Expert for Team Onboarding
+    ├── first-day.md
+    ├── tools.md
+    └── culture.md
+```
+
+Each folder becomes a separate knowledge domain that the bot can consult.
+
 ## Features
 
 - **RAG (Retrieval-Augmented Generation)**: True RAG pattern with context gathering + LLM synthesis
@@ -161,39 +258,16 @@ Invite the bot to a channel and try:
 @bot what experts are available?
 ```
 
-## Adding Experts
+## Expert System Details
 
-Experts are discovered by convention. Just drop docs in a folder:
+For a complete guide on adding experts, see the **[Adding Your Experts](#adding-your-experts)** section at the top of this README.
 
-```bash
-mkdir docs/experts/api
-```
+**Quick recap:**
+- Drop docs in `docs/experts/[your-domain]/`
+- Restart the bot with `docker-compose restart bot`
+- Ask questions in Slack
 
-Create documentation files:
-```bash
-# docs/experts/api/overview.md
-# API Overview
-Our API provides RESTful endpoints for...
-
-# docs/experts/api/authentication.md
-# Authentication
-Use Bearer tokens...
-```
-
-Restart to vectorize:
-```bash
-docker-compose restart bot
-```
-
-Test:
-```
-@bot how do I authenticate to the API?
-```
-
-The bot will:
-1. Search vector store for relevant docs
-2. Pass context to Gemini
-3. Return answer with source citations
+The bot uses semantic search over vectorized documentation to provide accurate, cited answers.
 
 ## Adding Skills
 

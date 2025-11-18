@@ -149,7 +149,7 @@ public class AgentCore {
                 Document doc = docs.get(i);
                 String source = (String) doc.getMetadata().getOrDefault("source", "Unknown");
                 contextBuilder.append(String.format("[Document %d - Source: %s]\n%s\n\n",
-                    i + 1, source, doc.getContent()));
+                    i + 1, source, doc.getText()));
             }
         }
 

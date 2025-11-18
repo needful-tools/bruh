@@ -7,6 +7,7 @@ import com.slack.api.bolt.App;
 import com.slack.api.methods.SlackApiException;
 import com.slack.api.methods.response.conversations.ConversationsHistoryResponse;
 import com.slack.api.methods.response.search.SearchMessagesResponse;
+import com.slack.api.model.MatchedItem;
 import com.slack.api.model.Message;
 import com.slack.api.model.SearchResult;
 import lombok.extern.slf4j.Slf4j;
@@ -181,7 +182,7 @@ public class DataAccessSkill implements Skill {
     /**
      * Formats search results into readable text
      */
-    private String formatSearchResults(List<SearchResult.Match> matches) {
+    private String formatSearchResults(List<MatchedItem> matches) {
         return matches.stream()
             .limit(10)
             .map(match -> {

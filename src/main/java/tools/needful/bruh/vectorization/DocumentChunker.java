@@ -29,7 +29,7 @@ public class DocumentChunker {
 
     private List<Document> chunkDocument(Document doc) {
         List<Document> chunks = new ArrayList<>();
-        String content = doc.getContent();
+        String content = doc.getText();
 
         // Simple paragraph-based chunking
         List<String> paragraphs = Arrays.asList(content.split("\n\n+"));

@@ -78,7 +78,7 @@ public class ExpertConsultationService {
 
         // Generate answer using LLM
         String context = relevantDocs.stream()
-            .map(Document::getContent)
+            .map(Document::getText)
             .collect(Collectors.joining("\n\n---\n\n"));
 
         String prompt = buildPrompt(expertName, context, query);

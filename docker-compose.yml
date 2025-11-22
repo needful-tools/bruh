@@ -19,11 +19,11 @@ services:
     networks:
       - slack-agent-network
 
-  bot:
+  bruh:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: slack-agent-bot
+    container_name: bruh
     depends_on:
       chroma:
         condition: service_healthy

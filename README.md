@@ -42,7 +42,7 @@ The easiest way to customize this bot is by adding your own domain experts. **Si
 
 3. **Restart the bot** to vectorize your new documentation:
    ```bash
-   docker-compose restart bot
+   docker-compose restart bruh
    ```
 
 4. **Test it in Slack**:
@@ -107,7 +107,7 @@ Each folder becomes a separate knowledge domain that the bot can consult.
 - **LLM-Based Skill Routing**: Intelligent skill selection using AI (supports multiple skills per query)
 - **Data Access API Integration**: Search Slack conversations, retrieve channel history, and access historical data
 - **Intelligent Synthesis**: Final LLM call synthesizes all gathered data with proper attribution
-- **Spring AI Integration**: Powered by Google Gemini LLM
+- **Spring AI Integration**: Powered by Google Gemini API (direct API key authentication)
 - **Vector Search**: ChromaDB for semantic search over documentation
 - **Auto-Discovery**: Experts and skills discovered automatically on startup
 - **Docker-Ready**: Complete docker-compose setup with Chroma sidecar
@@ -198,7 +198,7 @@ method - it's not mentioned in the available documentation.
 ### Prerequisites
 
 - Docker & Docker Compose
-- Google Cloud account with Vertex AI API enabled
+- Gemini API key from Google AI Studio (https://aistudio.google.com/apikey)
 - Slack workspace with bot app created
 
 ### 1. Configure Slack App
@@ -229,9 +229,7 @@ cp .env.example .env
 
 Edit `.env` with your credentials:
 ```env
-GOOGLE_API_KEY=your-google-api-key
-GOOGLE_PROJECT_ID=your-google-project-id
-GOOGLE_LOCATION=us-central1
+GEMINI_API_KEY=your-gemini-api-key
 SLACK_BOT_TOKEN=xoxb-your-bot-token
 SLACK_SIGNING_SECRET=your-signing-secret
 SLACK_APP_TOKEN=xapp-your-app-token
@@ -264,7 +262,7 @@ For a complete guide on adding experts, see the **[Adding Your Experts](#adding-
 
 **Quick recap:**
 - Drop docs in `docs/experts/[your-domain]/`
-- Restart the bot with `docker-compose restart bot`
+- Restart the bot with `docker-compose restart bruh`
 - Ask questions in Slack
 
 The bot uses semantic search over vectorized documentation to provide accurate, cited answers.
@@ -429,21 +427,17 @@ Key settings:
 ```yaml
 spring:
   ai:
-    vertex:
-      ai:
-        gemini:
-          project-id: ${GOOGLE_PROJECT_ID}
-          location: ${GOOGLE_LOCATION}
-          chat:
-            options:
-              model: gemini-2.0-flash-exp
-              temperature: 0.7
-
     vectorstore:
       chroma:
         client:
           host: ${CHROMA_URL:http://localhost:8000}
-        collection-name: slack-agent-experts
+        collection-name: bruh-experts
+
+gemini:
+  api:
+    key: ${GEMINI_API_KEY}
+    model: gemini-2.0-flash
+    temperature: 0.7
 
 agent:
   experts:
@@ -464,7 +458,7 @@ docker run -p 8000:8000 chromadb/chroma:latest
 2. Set environment variables:
 ```bash
 export CHROMA_URL=http://localhost:8000
-export GOOGLE_API_KEY=your-key
+export GEMINI_API_KEY=your-gemini-api-key
 export SLACK_BOT_TOKEN=your-token
 export SLACK_SIGNING_SECRET=your-secret
 export SLACK_APP_TOKEN=your-app-token
@@ -479,7 +473,7 @@ mvn spring-boot:run
 
 View logs:
 ```bash
-docker-compose logs -f bot
+docker-compose logs -f bruh
 docker-compose logs -f chroma
 ```
 
@@ -500,7 +494,7 @@ docker-compose ps
 
 2. Check bot logs:
 ```bash
-docker-compose logs bot | tail -50
+docker-compose logs bruh | tail -50
 ```
 
 3. Verify Slack tokens in `.env`
@@ -511,7 +505,7 @@ docker-compose logs bot | tail -50
 2. Verify markdown files are present
 3. Restart to re-vectorize:
 ```bash
-docker-compose restart bot
+docker-compose restart bruh
 ```
 
 4. Check logs for vectorization confirmation:
@@ -569,5 +563,5 @@ MIT
 
 For issues and questions:
 - Check `docs/experts/bot/troubleshooting.md`
-- Review logs: `docker-compose logs bot`
+- Review logs: `docker-compose logs bruh`
 - Open an issue on GitHub

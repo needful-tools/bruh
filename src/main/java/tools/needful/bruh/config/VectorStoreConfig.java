@@ -36,13 +36,22 @@ public class VectorStoreConfig {
 
     @Bean
     public VectorStore vectorStore(ChromaApi chromaApi, EmbeddingModel embeddingModel) {
-        chromaApi.createTenant(ChromaApiConstants.DEFAULT_TENANT_NAME);
-        chromaApi.createDatabase(ChromaApiConstants.DEFAULT_TENANT_NAME, ChromaApiConstants.DEFAULT_DATABASE_NAME);
+        if  (chromaApi.getTenant(ChromaApiConstants.DEFAULT_TENANT_NAME) == null) {
+            chromaApi.createTenant(ChromaApiConstants.DEFAULT_TENANT_NAME);
+        }
 
-        var request = new ChromaApi.CreateCollectionRequest(collectionName);
-        chromaApi.createCollection(ChromaApiConstants.DEFAULT_TENANT_NAME,
-                ChromaApiConstants.DEFAULT_DATABASE_NAME, request);
-        // Collection is ensured to exist by ChromaCollectionInitializer
+        if (chromaApi.getDatabase(ChromaApiConstants.DEFAULT_TENANT_NAME,
+                ChromaApiConstants.DEFAULT_DATABASE_NAME) == null) {
+            chromaApi.createDatabase(ChromaApiConstants.DEFAULT_TENANT_NAME, ChromaApiConstants.DEFAULT_DATABASE_NAME);
+        }
+
+        if (chromaApi.getCollection(ChromaApiConstants.DEFAULT_TENANT_NAME, ChromaApiConstants.DEFAULT_DATABASE_NAME,
+                collectionName) == null) {
+            var request = new ChromaApi.CreateCollectionRequest(collectionName);
+            chromaApi.createCollection(ChromaApiConstants.DEFAULT_TENANT_NAME,
+                    ChromaApiConstants.DEFAULT_DATABASE_NAME, request);
+        }
+
         return ChromaVectorStore.builder(chromaApi, embeddingModel)
                 .tenantName(ChromaApiConstants.DEFAULT_TENANT_NAME)
                 .databaseName(ChromaApiConstants.DEFAULT_DATABASE_NAME)

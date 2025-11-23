@@ -36,6 +36,8 @@ public class SlackEventListener {
             String text = event.getText();
             String userId = event.getUser();
             String channelId = event.getChannel();
+            String messageTs = event.getTs();
+            String threadTs = event.getThreadTs(); // null if not in a thread
 
             log.info("Received mention in channel {}: {}", channelId, text);
 
@@ -43,12 +45,12 @@ public class SlackEventListener {
             String query = text.replaceAll("<@[A-Z0-9]+>", "").trim();
 
             // Process with agent
-            AgentResponse response = agentCore.handleQuery(query, userId, channelId);
+            AgentResponse response = agentCore.handleQuery(query, userId, channelId, messageTs, threadTs);
 
-            // Send response
+            // Send response in thread
             ctx.client().chatPostMessage(req -> req
                 .channel(channelId)
-                .threadTs(event.getTs())
+                .threadTs(threadTs != null ? threadTs : messageTs)
                 .text(response.getAnswer())
             );
 

@@ -105,6 +105,7 @@ Each folder becomes a separate knowledge domain that the bot can consult.
 - **Convention-Based Expert System**: Add domain knowledge by dropping docs in folders
 - **Extensible Skills**: Add general-purpose capabilities via @Component annotation
 - **LLM-Based Skill Routing**: Intelligent skill selection using AI (supports multiple skills per query)
+- **Thread-Aware Progressive Search**: Smart search escalation (Thread → Channel → Workspace) with AI-driven sufficiency checks
 - **Data Access API Integration**: Search Slack conversations, retrieve channel history, and access historical data
 - **Intelligent Synthesis**: Final LLM call synthesizes all gathered data with proper attribution
 - **Spring AI Integration**: Powered by Google Gemini API (direct API key authentication)
@@ -200,6 +201,7 @@ method - it's not mentioned in the available documentation.
 - Docker & Docker Compose
 - Gemini API key from Google AI Studio (https://aistudio.google.com/apikey)
 - Slack workspace with bot app created
+- Slack User Token (for workspace-wide message search)
 
 ### 1. Configure Slack App
 
@@ -212,7 +214,9 @@ Create a Slack app at https://api.slack.com/apps with:
 - `groups:history`
 - `im:history`
 - `mpim:history`
-- `search:read` (for Data Access API)
+
+**OAuth & Permissions → User Token Scopes:**
+- `search:read` (for workspace-wide message search)
 
 **Event Subscriptions:**
 - Enable Events
@@ -233,6 +237,7 @@ GEMINI_API_KEY=your-gemini-api-key
 SLACK_BOT_TOKEN=xoxb-your-bot-token
 SLACK_SIGNING_SECRET=your-signing-secret
 SLACK_APP_TOKEN=xapp-your-app-token
+SLACK_USER_TOKEN=xoxp-your-user-token
 ```
 
 ### 3. Start the Application
@@ -339,17 +344,26 @@ The LLM will route to **both** the `time` and `data-access` skills:
 
 ### Data Access Skill (`data-access`)
 
-Search and retrieve Slack conversation data:
-- Workspace-wide message search
-- Channel history retrieval
-- Message filtering and formatting
+Search and retrieve Slack conversation data with intelligent progressive search:
+- **Thread-aware context**: Automatically checks thread history first
+- **Progressive search**: Thread → Channel → Workspace fallback strategy
+- **LLM-driven sufficiency**: Uses AI to determine if search results are adequate before escalating
+- **Workspace-wide search**: Full message search across all accessible channels
+- **Channel history**: Retrieves conversation history from specific channels
+- **Smart scoping**: Automatically determines appropriate search scope
 
 Example queries:
 ```
+@bot what was discussed in this thread?
 @bot search for messages about the deadline
 @bot what was discussed in this channel about the project?
-@bot show recent messages here
+@bot search workspace for mentions of the new feature
 ```
+
+The skill intelligently escalates search scope:
+1. Checks thread context if query is in a thread
+2. Falls back to channel search if thread context insufficient
+3. Escalates to workspace search if needed or explicitly requested
 
 ### Time Skill (`time`)
 
@@ -430,20 +444,32 @@ spring:
     vectorstore:
       chroma:
         client:
-          host: ${CHROMA_URL:http://localhost:8000}
+          host: ${CHROMA_HOST:localhost}
+          port: ${CHROMA_PORT:8000}
         collection-name: bruh-experts
+        initialize-schema: true
 
 gemini:
   api:
     key: ${GEMINI_API_KEY}
     model: gemini-2.0-flash
     temperature: 0.7
+    embedding-model: text-embedding-004
+
+slack:
+  bot:
+    token: ${SLACK_BOT_TOKEN}
+    signing-secret: ${SLACK_SIGNING_SECRET}
+    app-token: ${SLACK_APP_TOKEN}
+  user:
+    token: ${SLACK_USER_TOKEN:}
 
 agent:
   experts:
     base-path: "docs/experts"
     chunk-size: 500
     chunk-overlap: 50
+    vectorize-on-startup: true
 ```
 
 ## Development
@@ -462,6 +488,7 @@ export GEMINI_API_KEY=your-gemini-api-key
 export SLACK_BOT_TOKEN=your-token
 export SLACK_SIGNING_SECRET=your-secret
 export SLACK_APP_TOKEN=your-app-token
+export SLACK_USER_TOKEN=your-user-token
 ```
 
 3. Run with Maven:
@@ -539,13 +566,14 @@ Ask:
 
 - [x] LLM-based skill routing (supports multiple skills)
 - [x] Data Access API integration
+- [x] Thread-aware progressive search (Thread → Channel → Workspace)
+- [x] LLM-driven search sufficiency checking
 - [ ] Hot reload for documentation changes
 - [ ] Multi-expert synthesis
 - [ ] Conversation memory
 - [ ] Metrics & monitoring
 - [ ] Web search skill
 - [ ] Admin commands
-- [ ] Slack assistant.search.context API integration
 
 ## License
 

@@ -25,6 +25,8 @@ slack:
     token: ${SLACK_BOT_TOKEN}
     signing-secret: ${SLACK_SIGNING_SECRET}
     app-token: ${SLACK_APP_TOKEN}
+  user:
+    token: ${SLACK_USER_TOKEN:}
 
 agent:
   experts:

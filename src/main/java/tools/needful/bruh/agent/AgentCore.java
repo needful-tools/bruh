@@ -48,13 +48,13 @@ public class AgentCore {
     @Autowired
     private ChatClient.Builder chatClientBuilder;
 
-    public AgentResponse handleQuery(String query, String userId, String channelId) {
+    public AgentResponse handleQuery(String query, String userId, String channelId, String messageTs, String threadTs) {
         log.info("Handling query: {}", query);
 
         // STEP 1: RETRIEVAL - Gather all available context
 
         // 1a. Determine which skills to use and execute them
-        List<String> skillData = gatherSkillData(query, userId, channelId);
+        List<String> skillData = gatherSkillData(query, userId, channelId, messageTs, threadTs);
 
         // 1b. Search vector store for relevant documentation
         List<Document> relevantDocs = gatherDocumentation(query);
@@ -70,7 +70,7 @@ public class AgentCore {
     /**
      * RETRIEVAL: Execute skills to gather data (e.g., Slack messages, external APIs)
      */
-    private List<String> gatherSkillData(String query, String userId, String channelId) {
+    private List<String> gatherSkillData(String query, String userId, String channelId, String messageTs, String threadTs) {
         List<String> skillData = new ArrayList<>();
 
         // Use LLM to determine which skill(s) are needed
@@ -85,6 +85,8 @@ public class AgentCore {
             .query(query)
             .userId(userId)
             .channelId(channelId)
+            .messageTs(messageTs)
+            .threadTs(threadTs)
             .build();
 
         // Execute all selected skills

@@ -22,6 +22,27 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 /**
+ * Result of evaluating search sufficiency with extracted context
+ */
+class SufficiencyResult {
+    private final boolean sufficient;
+    private final String extractedContext;
+
+    public SufficiencyResult(boolean sufficient, String extractedContext) {
+        this.sufficient = sufficient;
+        this.extractedContext = extractedContext;
+    }
+
+    public boolean isSufficient() {
+        return sufficient;
+    }
+
+    public String getExtractedContext() {
+        return extractedContext;
+    }
+}
+
+/**
  * Slack Search Skill provides intelligent search across Slack conversations.
  *
  * This skill leverages Slack's search APIs with LLM-guided query optimization:
@@ -222,6 +243,7 @@ public class SlackSearchSkill implements Skill {
 
         List<MatchedItem> allResults = new ArrayList<>();
         List<String> attemptedQueries = new ArrayList<>();
+        SufficiencyResult sufficiencyResult = null;
 
         for (int iteration = 0; iteration < MAX_ITERATIONS; iteration++) {
             log.info("Search iteration {}/{}", iteration + 1, MAX_ITERATIONS);
@@ -243,10 +265,13 @@ public class SlackSearchSkill implements Skill {
                 log.info("Total unique results so far: {}", allResults.size());
             }
 
-            // Check if we have sufficient results
-            if (!allResults.isEmpty() && areSearchResultsSufficient(query, allResults, iteration + 1)) {
-                log.info("Search results deemed sufficient after {} iteration(s)", iteration + 1);
-                break;
+            // Check if we have sufficient results and extract relevant context
+            if (!allResults.isEmpty()) {
+                sufficiencyResult = areSearchResultsSufficient(query, allResults, iteration + 1);
+                if (sufficiencyResult.isSufficient()) {
+                    log.info("Search results deemed sufficient after {} iteration(s)", iteration + 1);
+                    break;
+                }
             }
 
             if (iteration < MAX_ITERATIONS - 1) {
@@ -258,12 +283,16 @@ public class SlackSearchSkill implements Skill {
             return SkillResult.success("No messages found matching: " + query);
         }
 
-        // Format final results
-        String formattedResults = formatSearchResults(allResults);
-        String summary = String.format("Found %d messages (across %d search iteration(s)):\n\n%s",
-            allResults.size(),
+        // Use extracted context from LLM (compressed and relevant)
+        // instead of raw formatted results
+        String extractedContext = sufficiencyResult != null
+            ? sufficiencyResult.getExtractedContext()
+            : formatSearchResults(allResults); // Fallback to raw formatting
+
+        String summary = String.format("Relevant information from Slack (searched %d iteration(s), found %d messages):\n\n%s",
             attemptedQueries.size(),
-            formattedResults
+            allResults.size(),
+            extractedContext
         );
 
         return SkillResult.success(summary);
@@ -493,9 +522,9 @@ public class SlackSearchSkill implements Skill {
     }
 
     /**
-     * Uses LLM to determine if search results are sufficient to answer the user's query
+     * Uses LLM to determine if search results are sufficient and extract relevant context
      */
-    private boolean areSearchResultsSufficient(String userQuery, List<MatchedItem> results, int iterationNumber) {
+    private SufficiencyResult areSearchResultsSufficient(String userQuery, List<MatchedItem> results, int iterationNumber) {
         try {
             ChatClient chatClient = chatClientBuilder.build();
 
@@ -504,23 +533,30 @@ public class SlackSearchSkill implements Skill {
             for (int i = 0; i < Math.min(results.size(), 10); i++) {
                 MatchedItem item = results.get(i);
                 String channel = item.getChannel() != null ? item.getChannel().getName() : "Unknown";
+                String channelId = item.getChannel() != null ? item.getChannel().getId() : null;
                 String username = item.getUsername() != null ? item.getUsername() : "Unknown";
                 String text = item.getText() != null ? item.getText() : "";
+                String timestamp = item.getTs();
 
-                resultsText.append(String.format("[%d] #%s - %s: %s\n",
-                    i + 1, channel, username, truncate(text, 200)));
+                // Include link for context extraction
+                String link = buildSlackPermalink(channelId, timestamp);
+
+                resultsText.append(String.format("[%d] #%s - %s: %s\n    Link: %s\n",
+                    i + 1, channel, username, truncate(text, 200), link));
             }
 
             String prompt = String.format(
                 "Evaluate if these Slack search results contain enough information to answer the user's question.\n\n" +
                 "USER'S QUESTION: \"%s\"\n\n" +
                 "SEARCH RESULTS (iteration %d, %d total messages):\n%s\n\n" +
-                "Does this data contain relevant and sufficient information to provide a helpful answer?\n" +
-                "Consider:\n" +
-                "- Are there relevant messages that address the question?\n" +
-                "- Is there enough context and detail?\n" +
-                "- Would another search likely find significantly better information?\n\n" +
-                "Respond with ONLY 'YES' if sufficient, or 'NO' if more searching would help.\n\n" +
+                "YOUR TASK:\n" +
+                "1. Determine if this data is SUFFICIENT to provide a helpful answer\n" +
+                "2. Extract and summarize ONLY the relevant information that answers the question\n\n" +
+                "RESPOND IN THIS FORMAT:\n" +
+                "SUFFICIENT: YES or NO\n" +
+                "SUMMARY: [Concise summary of relevant information with Slack links in markdown format]\n\n" +
+                "If SUFFICIENT=NO, provide a brief summary of what you found and what's missing.\n" +
+                "If SUFFICIENT=YES, provide a comprehensive summary with inline links.\n\n" +
                 "Your response:",
                 userQuery,
                 iterationNumber,
@@ -532,16 +568,27 @@ public class SlackSearchSkill implements Skill {
                 .user(prompt)
                 .call()
                 .content()
-                .trim()
-                .toUpperCase();
+                .trim();
 
-            boolean sufficient = response.contains("YES");
+            // Parse response
+            boolean sufficient = response.toUpperCase().contains("SUFFICIENT: YES");
+
+            // Extract summary (everything after "SUMMARY:")
+            String summary = "";
+            int summaryIndex = response.indexOf("SUMMARY:");
+            if (summaryIndex != -1) {
+                summary = response.substring(summaryIndex + 8).trim();
+            } else {
+                // Fallback: use entire response if format not followed
+                summary = response;
+            }
+
             log.info("LLM sufficiency evaluation: {}", sufficient ? "SUFFICIENT" : "INSUFFICIENT");
-            return sufficient;
+            return new SufficiencyResult(sufficient, summary);
 
         } catch (Exception e) {
             log.warn("Error evaluating search sufficiency, assuming insufficient", e);
-            return false; // Continue searching on error
+            return new SufficiencyResult(false, "Error evaluating results: " + e.getMessage());
         }
     }
 

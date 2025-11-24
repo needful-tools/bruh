@@ -10,6 +10,13 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
+import java.util.Set;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
+
 @Slf4j
 @Component
 public class SlackEventListener {
@@ -20,17 +27,35 @@ public class SlackEventListener {
     @Autowired
     private AgentCore agentCore;
 
+    // Track processed events to prevent duplicates (event_id -> expiry_time)
+    private final Set<String> processedEvents = ConcurrentHashMap.newKeySet();
+    private final ScheduledExecutorService cleanupScheduler = Executors.newSingleThreadScheduledExecutor();
+
     @PostConstruct
     public void registerListeners() {
         // Listen for app mentions
         slackApp.event(AppMentionEvent.class, (event, ctx) -> {
-            // Acknowledge immediately to prevent Slack retries
-            var ack = ctx.ack();
+            String eventId = event.getEventId();
 
-            // Process asynchronously (after acknowledgment)
-            handleAppMention(event.getEvent(), ctx);
+            // Check if we've already processed this event (deduplication)
+            if (processedEvents.contains(eventId)) {
+                log.info("Skipping duplicate event: {}", eventId);
+                return ctx.ack();
+            }
 
-            return ack;
+            // Mark event as processed
+            processedEvents.add(eventId);
+
+            // Schedule cleanup of this event ID after 2 minutes
+            cleanupScheduler.schedule(() -> processedEvents.remove(eventId), 2, TimeUnit.MINUTES);
+
+            // Acknowledge immediately (within 3 seconds)
+            ctx.ack();
+
+            // Process asynchronously in a separate thread
+            CompletableFuture.runAsync(() -> handleAppMention(event.getEvent(), ctx));
+
+            return ctx.ack();
         });
 
         log.info("Slack event listeners registered");

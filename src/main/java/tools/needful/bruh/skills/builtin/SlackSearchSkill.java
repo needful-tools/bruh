@@ -356,9 +356,18 @@ public class SlackSearchSkill implements Skill {
         // Filter out messages that mention the bot (usually questions TO the bot, not answers)
         List<MatchedItem> filtered = filterBotMentions(searchResult.getMatches());
 
-        if (filtered.size() < searchResult.getMatches().size()) {
+        int afterBotFilter = filtered.size();
+        if (afterBotFilter < searchResult.getMatches().size()) {
             log.info("Filtered out {} bot mention(s) from search results",
-                searchResult.getMatches().size() - filtered.size());
+                searchResult.getMatches().size() - afterBotFilter);
+        }
+
+        // Filter out private channels to prevent leaking private information
+        filtered = filterPrivateChannels(filtered);
+
+        if (filtered.size() < afterBotFilter) {
+            log.info("Filtered out {} private channel message(s) from search results",
+                afterBotFilter - filtered.size());
         }
 
         return filtered;
@@ -406,6 +415,39 @@ public class SlackSearchSkill implements Skill {
                                     text.toLowerCase().contains("@bruh");
 
                 return !mentionsBot; // Keep messages that DON'T mention the bot
+            })
+            .collect(Collectors.toList());
+    }
+
+    /**
+     * Filters out messages from private channels to prevent information leakage
+     */
+    private List<MatchedItem> filterPrivateChannels(List<MatchedItem> messages) {
+        return messages.stream()
+            .filter(msg -> {
+                var channel = msg.getChannel();
+                if (channel == null || channel.getId() == null) {
+                    return false; // Skip if no channel info
+                }
+
+                String channelId = channel.getId();
+
+                // Slack channel ID prefixes:
+                // C = Public channel
+                // G = Private channel (group)
+                // D = Direct message
+                // Other prefixes exist but are less common
+
+                // Only keep messages from public channels (starting with "C")
+                boolean isPublicChannel = channelId.startsWith("C");
+
+                if (!isPublicChannel) {
+                    log.debug("Filtering out message from non-public channel: {} (ID: {})",
+                        channel.getName() != null ? channel.getName() : "Unknown",
+                        channelId);
+                }
+
+                return isPublicChannel;
             })
             .collect(Collectors.toList());
     }

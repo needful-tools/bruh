@@ -18,8 +18,8 @@ The bot uses **AI-powered skill routing** to automatically select which skill(s)
 
 ## Current Skills
 
-### DataAccessSkill
-**Name**: `data-access`
+### SlackSearchSkill
+**Name**: `slack-search`
 
 Search and retrieve Slack conversation data:
 - Workspace-wide message search
@@ -74,7 +74,7 @@ The AI can use multiple skills at once!
 ```
 
 The AI will:
-1. Route to BOTH `time` and `data-access` skills
+1. Route to BOTH `time` and `slack-search` skills
 2. Execute both skills in parallel
 3. Combine results: current time + messages about deadlines
 4. Synthesize a coherent answer

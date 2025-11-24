@@ -24,8 +24,13 @@ public class SlackEventListener {
     public void registerListeners() {
         // Listen for app mentions
         slackApp.event(AppMentionEvent.class, (event, ctx) -> {
+            // Acknowledge immediately to prevent Slack retries
+            var ack = ctx.ack();
+
+            // Process asynchronously (after acknowledgment)
             handleAppMention(event.getEvent(), ctx);
-            return ctx.ack();
+
+            return ack;
         });
 
         log.info("Slack event listeners registered");

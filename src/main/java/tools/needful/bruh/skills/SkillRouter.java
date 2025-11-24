@@ -50,7 +50,7 @@ public class SkillRouter {
             - Select ONE or MORE skills that are relevant to answering this query
             - If multiple skills could help, list all of them
             - If NO skills are applicable, respond with "NONE"
-            - Respond ONLY with skill names, comma-separated (e.g., "data-access, time")
+            - Respond ONLY with skill names, comma-separated (e.g., "slack-search, time")
             - Use exact skill names from the list above
 
             Skills to use:

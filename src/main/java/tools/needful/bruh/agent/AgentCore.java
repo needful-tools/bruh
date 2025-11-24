@@ -185,11 +185,14 @@ public class AgentCore {
 
             IMPORTANT GUIDELINES:
             1. If the answer is in the documentation, cite the source (e.g., "According to [source]...")
-            2. If the answer is based on Slack conversations, mention that (e.g., "Based on recent discussions...")
+            2. If the answer is based on Slack conversations, ALWAYS include the Slack links provided in the context
+               - Format: "According to [this conversation](link)" or "See [this message](link)"
+               - Include relevant links inline in your answer, not as a separate list at the end
             3. If you're making reasonable inferences or assumptions, be explicit (e.g., "Based on the information provided, it appears that...")
             4. If you don't know or the context doesn't contain the answer, say so clearly (e.g., "I don't have enough information to answer that")
             5. NEVER make up information that isn't in the context
             6. Be concise but complete
+            7. Use markdown formatting for links
 
             Context:
             %s

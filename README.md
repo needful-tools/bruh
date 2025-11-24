@@ -163,7 +163,7 @@ When you ask **"How to configure the service?"**:
 
 **RETRIEVAL Phase:**
 1. **Skill Router** (LLM) determines if any skills are needed
-   - Selects `data-access` to search Slack for configuration discussions
+   - Selects `slack-search` to search Slack for configuration discussions
 2. **Expert Router** (LLM) selects relevant documentation experts
    - Searches vector store for configuration docs
 3. **Gather All Context**: Raw Slack messages + documentation chunks
@@ -328,9 +328,9 @@ The agent uses an LLM to intelligently select which skill(s) to use for each que
 
 User asks: "What time is it and search for messages about the launch?"
 
-The LLM will route to **both** the `time` and `data-access` skills:
+The LLM will route to **both** the `time` and `slack-search` skills:
 - `time` skill returns current time
-- `data-access` skill searches Slack for "launch" messages
+- `slack-search` skill searches Slack for "launch" messages
 - Results are combined and returned to the user
 
 ### Benefits
@@ -342,7 +342,7 @@ The LLM will route to **both** the `time` and `data-access` skills:
 
 ## Built-in Skills
 
-### Data Access Skill (`data-access`)
+### Slack Search Skill (`slack-search`)
 
 Search and retrieve Slack conversation data with intelligent progressive search:
 - **Thread-aware context**: Automatically checks thread history first
@@ -412,7 +412,7 @@ slack-agent/
 │   │   └── builtin/
 │   │       ├── EchoSkill.java
 │   │       ├── TimeSkill.java
-│   │       └── DataAccessSkill.java   # Slack Data Access API
+│   │       └── SlackSearchSkill.java   # Slack Data Access API
 │   │
 │   ├── agent/
 │   │   ├── AgentCore.java             # Main orchestration
